@@ -43,7 +43,7 @@
 
 -  `UserServiceImpl` : 비지니스 로직이 있는 클래스 
 -  `UserServiceTx` : 트랜잭션 관련 로직이 있는 클래스
-- 클라이언트는 `UserService` 인터페이스 타입을 바라보게 되면서 약결합 상태로 만들수 있고 때문에 유연한 확장이 가능한 구조가 됨
+-  클라이언트는 `UserService` 인터페이스 타입을 바라보게 되면서 약결합 상태로 만들수 있고 때문에 유연한 확장이 가능한 구조가 됨
 
 
 
@@ -192,8 +192,6 @@ public class UserServiceTx implements UserService {
 
 
 
-
-
 ### 데코레이터 패턴
 
 - 데코레이터 패턴은 타깃에 부가적인 기능을 런타임 시 다이내믹하게 부여해주기 위해 프록시를 사용하는 패턴
@@ -294,7 +292,6 @@ public interface InvocationHandler {
     public Object invoke(Object proxy, Method method, Object[] args)
         throws Throwable;
 }
-
 ```
 
 - 타깃 인터페이스의 모든 메서드 요청이 하나의 메서드로 집중되기 때문에 중복되는 기능을 효과적으로 제공할 수 있음
@@ -329,7 +326,6 @@ Hello proxy = (Hello) Proxy.newProxyInstance(
   getClass().getClassLoader(), //<- 동적으로 생성되는 다이내믹 프록시 클래스 로딩에 사용할 클래스 로더
   new Class[]{Hello.class}, // <- 구현할 인터페이스
   new Uppercasehandler(new HelloTarget())); // <- 부가기능과 위임 코드를 담은 InvocationHandler
-
 ```
 
 - 첫번째 파라미터는 다이내믹 프록시가 정의되는 클래스 로더를 지정
@@ -394,17 +390,7 @@ public class TransactionHandler implements InvocationHandler {
 - 팩토리 빈은 `FactoryBean` 이라는 인터페이스를 구현해서 만들 수 있음
 
 ```java
-public interface FactoryBean<T> {
-    @Nullable
-    T getObject() throws Exception;
-
-    @Nullable
-    Class<?> getObjectType();
-
-    default boolean isSingleton() {
-        return true;
-    }
-}
+public interface FactoryBean<T> {    @Nullable    T getObject() throws Exception;    @Nullable    Class<?> getObjectType();    default boolean isSingleton() {        return true;    }}
 ```
 
 - `FactoryBean` 인터페이스를 구현한 클래스를 스프링의 빈으로 등록하면 팩토리 빈으로 동작함
@@ -443,7 +429,6 @@ public class MyConfig {
         return new MessageFactoryBean("test");
     }
 }
-
 ```
 
 - 스프링은 `FactoryBean` 인터페이스를 구현한 클래스가 빈의 클래스로 지정되면, 팩토리 빈 클래스의 오브젝트의 `getObject()` 메서드를 이용해 오브젝트를 가져오고 이를 빈 오브젝트로 사용함
@@ -501,6 +486,7 @@ public class TxProxyFactoryBean implements FactoryBean<Object> {
         return false;
     }
 }
+
 ```
 
 
@@ -602,9 +588,6 @@ public class DynamicProxyTest {
 - `MethodInterceptor` 로는 메서드 정보와 함께 타깃 오브젝트가 담긴 `MethodInvocation` 오브젝트가 전달됨
 - `MethodInvocation` 은 타깃 오브젝트의 메서드를 실행할 수 있는 기능이 있기 때문에 `MethodInterceptor` 는 부가기능을 제공하는데만 집중할 수 있음
 - `MethodInvocation`은 일종의 콜백 오브젝트로 동작하기 때문에 `proceed()` 메서드를 사용하면 타깃 오브젝트의 메서드를 내부적으로 실행해주는 기능이 있음
-
-> MethodInvocation의 proceed() 메서드
-
 - `ProxyFactoryBean`은 작은 단위의 템플릿/콜백 구조를 응용해서 적용했기 때문에 템플릿 역할을 하는 `MethodInvocation`을 싱글톤으로 두고 공유할 수 있음
 - `ProxyFactoryBean`에는 여러개의 `MethodInvocation`를 추가할 수 있는 것도 특징. 따라서 팩토리 빈을 사용했을 때의 단점인 새로운 부가기능을 추가할 때마다 프록시와 프록시 팩토리 빈도 추가해줘야 한다는 문제를 해결할 수 있음.
 - `MethodInterceptor`처럼 타깃 오브젝트에 적용하는 부가기능을 담은 오브젝트를 스프링에서는 **어드바이스**라고 부름
@@ -616,8 +599,8 @@ public class DynamicProxyTest {
 - `MethodInvocation`은 재사용 가능한 순수한 부가 기능 제공 코드만 남겨주기 때문에 아래와 같이 특정 메서드를 선정해서 적용 대상을 판별할 수 없음
 
 ```java
-		//InvocationHandler 구현부
-		@Override
+    //InvocationHandler 구현부
+    @Override
     public Object invoke(Object proxy, Method method, Object[] args) throws Throwable {
         if (method.getName().startsWith(pattern)) {
             return invokeInTransaction(method, args);
@@ -629,7 +612,7 @@ public class DynamicProxyTest {
 - 스프링의 `ProxyFactoryBean` 방식은 두가지 확장 기능인 부가기능과 메서드 선정 알고리즘을 활용하는 유연한 구조를 제공함
 - **스프링은 부가기능을 제공하는 오브젝트를 어드바이스라고 부르고, 메서드 선정 알고리즘을 담은 오브젝트를 포인트컷 이라고 부름**
 - 프록시는 포인트컷으로부터 부가기능을 적용할 대상 메서드인지 확인받으면 `MethodInvocation` 타입의 어드바이스를 호출함
-- 포인트컷 구현체 [https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/aop/Pointcut.html](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/aop/Pointcut.html)
+- 포인트컷 구현체 목록 [https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/aop/Pointcut.html](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/aop/Pointcut.html)
 - 포인트컷 구현체중 하나인 `NameMatchMethodPointcut` 사용해보기
 
 ```java
@@ -654,7 +637,7 @@ public void pointcutAdvisor() {
 [![9](https://github.com/sup2is/dev-note/raw/master/spring/images/toby-spring-vol1/9.jpeg)](https://github.com/sup2is/dev-note/blob/master/spring/images/toby-spring-vol1/9.jpeg)
 
 - 동작 방식
-  - 프록시는 클라이언트로부터 요청을 받으면 먼저 포인트컷에게 구가기능을 부여할 메서드인지 확인해달라고 요청함
+  - 프록시는 클라이언트로부터 요청을 받으면 먼저 포인트컷에게 부가기능을 부여할 메서드인지 확인해달라고 요청함
   - 확인 받으면 `MethodInterceptor` 타입의 어드바이스를 호출
   - Invocation 콜백을 수행하고 타깃 오브젝트의 메서드를 수행
 
@@ -665,7 +648,7 @@ public void pointcutAdvisor() {
 
 
 
-### ProxyFactoryBean 적용해보기
+### MethodInterceptor 적용해보기
 
 ```java
 public class TransactionAdvice implements MethodInterceptor {
@@ -689,10 +672,11 @@ public class TransactionAdvice implements MethodInterceptor {
         }
     }
 }
+
 ```
 
 - `MethodInterceptor`를 사용해서 `InvocationHandler` 보다 재사용성이 높고 타깃 메서드가 던지는 예외도 `RuntimeException`으로 바로 받을 수 있음
-- 여전히 남아있는 문제가 하나 있는데 바로 설정쪽에 번거로운 작업과 중복문제
+- 여전히 남아있는 문제가 하나 있는데 바로 설정쪽에 번거로운 작업과 중복문제. 한번에 여러개의 클래스에 공통적인 부가기능을 한번에 제공하는 방법이 불가능함.
 - 빈 후처리기를 이용해서 자동으로 프록시를 생성하게 할 수 있음
 
 
@@ -702,7 +686,7 @@ public class TransactionAdvice implements MethodInterceptor {
 ### 빈 후처리기를 이용한 자동 프록시 생성기
 
 - 빈 후처리기는 이름 그대로 스프링 빈 오브젝트로 만들어지고 난 후에 빈 오브젝트를 다시 가공할 수 있게 해줌
-- 빈 후처리기는 BeanPostProcessor 인터페이스를 구현해서 만들 수 있음  (자세한 내용은 vol.2에서 ..)
+- 빈 후처리기는 `BeanPostProcessor` 인터페이스를 구현해서 만들 수 있음  (자세한 내용은 vol.2에서 ..)
 
 ```java
 public interface BeanPostProcessor {
@@ -912,53 +896,79 @@ execution(* *(..))
 - 트랜잭션을 처리하는 코드는 일종의 데코레이터에 담겨서, 클라이언트와 비즈니스 로직을 담은 타깃 클래스 사이에 존재하도록해서 프록시 역할을 하는 트랜잭션 데코레이터가 타깃에 접근하는 구조가 됨
 - 비즈니스 로직 코드는 트랜잭션과 같은 성격이 다른 코드로부터 자유로워졌고 독립적으로 로직을 검증하는 고립된 단위 테스트를 만들 수 있게 됨
 
-### 다이내믹 프록시와 프록시 팩토리 빈
+### 다이내믹 프록시
 
 - 프록시를 이용해서 비지니스 로직 코드에서 트랜잭션 코드는 모두 제거할 수 있었지만 비지니스 로직 인터페이스의 모든 메서드마다 트랜잭션 기능을 부여하는 코드를 넣어 프록시 클래스를 만드는 작업이 오히려 번거로웠음
-- 프록시 클래스 없이도 프록시 오브젝트를 런타임시에 만들어주는 jdk 다이내믹 프록시가 해결해줬음
 - 프록시 클래스 없이도 프록시 오브젝트를 런타임 시에 만들어주는 jdk 다이내믹 프록시 기술을 적용해서 프록시 클래스 코드 작성의 부담도 덜고 기능 부여 코드가 여기저기 중복돼어 나타나는 문제점도 일부 해결할 수 있음
 
+### 프록시 팩토리 빈
 
-
-
-
-
-
----
-
-
-
-
+- 다이내믹 프록시 방식의 단점은 동일한 기능의 프록시를 여러 오브젝트에 적용할 경우 오브젝트 단위로 중복이 일어나는 문제
+- 위 문제를 해결하기 위해 스프링 프록시 팩토리 빈을 사용해서 내부적으로 템플릿/콜백 패턴을 통해 어드바이스와 포인트컷이 프록시에서 분리되는 형태로 구현했음. 여러 프록시에서 공유해서 사용할 수 있게됨
 
 ### 자동 프록시 생성 방법과 포인트컷
 
+- 트랜잭션 적용 대상이 되는 빈마다 일일이 프록시 팩토리 빈을 설정해줘야한다는 부담감이 남아있었음
+- 위 문제를 해결하기 위해 스프링 컨테이너의 빈 생성 후처리 기법을 활용해 컨테이너 초기화 시점에서 자동으로 프록시를 만들어주는 방법을 도입했음
 - 프록시를 적용할 대상을 일일이 지정하지 않고 패턴을 이용해 자동으로 선정할 수 있도록, 클래스를 선정하는 기능을 담은 확장된 포인트컷을 사용
 - 트랜잭션 부가기능을 어디에 적용하는지에 대해 정보를 포인트컷이라는 독립적인 정보로 완전히 분리할 수 있음
+- 최종적으로 포인트컷 표현식이라는 좀 더 편리하고 깔끔한 방법을 사용해서 간단한 설정으로 적용대상을 선택하도록 구성
 
 ### 부가기능의 모듈화
 
 - 관심사가 같은 코드를 분리해 한데 모으는 것은 소프트웨어 개발의 가장 기본이 되는 원칙
-- 트랜잭션 같은 부가기능은 핵심 기능과 같은 방식으로 모듈화하기개 매우 힘듦
+- 트랜잭션 같은 부가기능은 핵심 기능과 같은 방식으로 모듈화하기가 매우 힘듦
 - DI, 데코레이터 패턴, 다이내믹 프록시, 오브젝트 생성 후처리, 자동 프록시 생성, 포인트컷과 같은 기법은 이런 문제를 해결하기 위해 적용한 대표적인 방법
 
 
 
-#### AOP: 에스펙트 지향 프로그래밍
+### AOP: 에스펙트 지향 프로그래밍
 
 - 애스펙트란 그 자체로 애플리케이션의 핵심기능을 담고 있지는 않지만 애플리케이션을 구성하는 중요한 한가지 요소이고, 핵심기능에 부가되어 의미를 갖는 특별한 모듈을 가르킴
 - 애스펙트는 부가될 기능을 정의한 코드인 어드바이스와, 어드바이스를 어디에 적용할지를 결정하는 포인트컷을 함께 갖고 있음.
-- 애플리케이션의 핵심적인 기능에서 부가적인 기능을 분리해서 애스펙트라는 독특한 모듈로 만들어서 설계하고 개발하는 방법을 애스펙트 지향 프로그래밍(Aspect Oriented Programming) 또는 AOP라고 부름 
+- 애플리케이션의 핵심적인 기능에서 부가적인 기능을 분리해서 애스펙트라는 독특한 모듈로 만들어서 설계하고 개발하는 방법을 **애스펙트 지향 프로그래밍(Aspect Oriented Programming)** 또는 AOP라고 부름 
 - AOP는 OOP를 돕는 보조적인 기술이지 OOP를 완전히 대체하는 새로운 개념은 아님
 - AOP는 애플리케이션을 다양한 측면에서 독립적으로 모델링하고, 설계하고 개발할 수 있도록 만들어주는 것
 
-### AOP 적용기술
-
-#### 프록시를 이용한 AOP
+### 프록시를 이용한 AOP
 
 - 독립적으로 개발한 부가기능 모듈을 다양한 타깃 오브젝트의 메서드에 다이내믹하게 적용해주기 위해 가장 중요한 역할을 맡고 있는게 바로 프록시
-- 스프링 AOP는 프록시 방식의 AOP
+- 스프링 AOP는 기본적으로 다이내믹 프록시 방식을 사용함. 하지만 이 방식은 interface 타입을 확장한 구현체에만 적용이 가능하기 때문에 슈퍼타입이 없는 경우에는 CGLib 방식을 사용함
+- EnableAspectJAutoProxy의 `proxyTargetClass` 로 기본 설정값을 변경할 수 있음
 
-#### 바이트코드 생성과 조작을 통한 AOP
+`EnableAspectJAutoProxy`
+
+```java
+@Target(ElementType.TYPE)
+@Retention(RetentionPolicy.RUNTIME)
+@Documented
+@Import(AspectJAutoProxyRegistrar.class)
+public @interface EnableAspectJAutoProxy {
+
+	/**
+	 * Indicate whether subclass-based (CGLIB) proxies are to be created as opposed
+	 * to standard Java interface-based proxies. The default is {@code false}.
+	 */
+	boolean proxyTargetClass() default false;
+
+	/**
+	 * Indicate that the proxy should be exposed by the AOP framework as a {@code ThreadLocal}
+	 * for retrieval via the {@link org.springframework.aop.framework.AopContext} class.
+	 * Off by default, i.e. no guarantees that {@code AopContext} access will work.
+	 * @since 4.3.1
+	 */
+	boolean exposeProxy() default false;
+
+}
+```
+
+- spring boot는 기본적으로 cglib 방식으로 프록시를 생성함 
+
+
+
+
+
+### 바이트코드 생성과 조작을 통한 AOP
 
 - AspectJ는 프록시를 사용하지 않는 대표적인 AOP 기술
 - AspectJ는 프록시처럼 간접적인 방법이 아니라, 타깃 오브젝트를 뜯어고쳐서 부가기능을 직접 넣어주는 직접적인 방법을 사용함
@@ -966,31 +976,30 @@ execution(* *(..))
 - AspectJ가 프록시를 사용하지 않고 바이트코드 조작 방법을 사용하는 이유
   - 바이트코드를 조작해서 타깃 오브젝트를 수정하면 스프링과 같은 DI 컨테이너의 도움을 받아서 자동 프록시 생성 방식을 사용하지 않아도 AOP를 적용할 수 있음
   - 프록시 방식보다 훨씬 강력하고 유연한 AOP가 가능함
-- 스프링은 프록시 방식과 바이트코드 조작 방식 두가지 방법을 상황에 맞게 사용함
 
 ### AOP의 용어
 
-- 타깃
+- `타깃`
   - 타깃은 부가기능을 부여할 대상.
-- 어드바이스
+- `어드바이스`
   - 어드바이스는 타깃에게 제공할 부가기능을 담은 모듈
   - 오브젝트 레벨로 정의하기도 하지만 메서드 레벨에서 정의할 수도 있음
   - 어드바이스는 여러 종류가 있음. MethodInterceptor 터럼 메서드 호출 과정에 전반적으로 참여하지만 예외가 발생했을때만 동작하는 어드바이스처럼 메서드 호출 과정의 일부에서만 동작하는 어드바이스도 있음
-- 조인 포인트
+- `조인 포인트`
   - 조인 포인트란 어드바이스가 적용될 수 있는 위치를 말함
   - 스프링의 프록시 AOP에서 조인포인트는 메서드의 실행 단계뿐
   - 오브젝트가 구현한 인터페이스의 모든 메서드는 조인 포인트가됨
-- 포인트컷
+- `포인트컷`
   - 포인트컷이란 어드바이스를 적용할 조인 포인트를 선별하는 작업 또는 그 기능을 정의한 모듈
   - 스프링 AOP의 조인 포인트는 메서드의 실행이므로 스프링의 포인트컷은 메서드를 선정하는 기능을 갖고 있음
-- 프록시
+- `프록시`
   - 프록시는 클라이언트와 타깃 사이에 투명하게 존재하면서 부가기능을 제공하는 오브젝트
   - DI를 통해 타깃 대신 클라이언트에게 주입되며, 클라이언트의 메서드 호출을 대신 받아서 타깃을 위임해주면서, 그 과정에서 부가기능을 부여함
-- 어드바이저
+- `어드바이저`
   - 어드바이저는 포인트컷과 어드바이스를 하나씩 갖고 있는 오브젝트
   - 어드바이저는 어떤 기능을 어디에 전달할 것인가를 알고 있는 AOP의 가장 기본이 되는 모듈
   - 어드바이저는 스프링 AOP에서만 사용되는 특별한 용어
-- 애스펙트
+- `애스펙트`
   - OOP의 클래스와 마찬가지로 애스펙트는 AOP의 기본 모듈임
   - 한 개 또는 그 이상의 포인트컷과 어드바이스의 조합으로 만들어짐
   - 보통 싱글톤 형태로 존재함
@@ -1006,13 +1015,183 @@ execution(* *(..))
   - 어드바이스
     - 부가기능을 구현한 클래스를 빈으로 등록
   - 포인트컷
-    - 스프링의 AspectExpressionPointCut을 빈으로 등록하고 expression 프로퍼티에 포인트컷 표현식을 넣어줘야함
+    - 스프링의 `AspectExpressionPointCut`을 빈으로 등록하고 expression 프로퍼티에 포인트컷 표현식을 넣어줘야함
   - 어드바이저
-    - 스프링의 DefaultPointcutAdvisor 클래스를 빈으로 등록해서 사용
+    - 스프링의 `DefaultPointcutAdvisor` 클래스를 빈으로 등록해서 사용
+
+
+
+
+
+
+## 트랜잭션 속성
+
+### 트랜잭션이란?
+
+- 트랜잭션 경계 안에서 정의되는 작업은 최소 단위의 작업
+- 트랜잭션 경계 안에서 진행된 작업은 `commit()` 을 통해 모두 성공하든지 아니면 `rollback()`을 통해 모두 취소되어야함
+
+### 트랜잭션 전파방식
+
+- 트랜잭션 전파란 트랜잭션의 경계에서 이미 진행중인 트랜잭션이 있을 때 또는 없을 때 어떻게 동작할 것인가를 결정하는 방식
+- `PROPAGATION_REQUIRED`
+  - 진행중인 트랜잭션이 없으면 새로 시작하고 이미 시작된 트랜잭션이 있으면 이에 참여함
+  - 가장 많이 사용되는 트랜잭션 전파 속성
+  - DefaultTransactionDefinition의 트랜잭션 전파 속성은 PROPAGATION_REQUIRED
+- `PROPAGATION_REQUIREDS_NEW`
+  - 항상 새로운 트랜잭션을 실행함
+  - 독립적인 트랜잭션이 보장되어야 하는 코드에 적용 가능
+- `PROPAGATION_NOT_SUPPORTED`
+  - 트랜잭션 없이 동작하도록 만듦. 진행중인 트랜잭션이 있더라도 무시함
+  - 특정 메서드가 AOP 대상이 되지 않도록 하기 위해 사용될 수 있음
+- 그 외 모든 트랜잭션 전파 옵션
+  - [https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/transaction/annotation/Propagation.html](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/transaction/annotation/Propagation.html)
+
+### 트랜잭션 격리 수준
+
+- 모든 DB 트랜잭션은 격리수준을 갖고 있어야 함
+- `DefaultTransactionDefinition`에 설정된 격리수준은 `ISOLATION_DEFAULT`, 이는 DataSource에 설정된 디폴트 격리수준을 그대로 따른다는 뜻
+- 기본적으로 DB나 DataSource에 설정된 디폴트 격리수준을 따르는 편이 좋지만, 특별한 작업을 수행하는 메서드의 경우는 독자적인 격리수준을 지정할 필요가 있음
+
+### 트랜잭션 제한시간
+
+- 트랜잭션을 수행하는 제한시간을 설정할 수 있음
+- `DefaultTransactionDefinition`의 기본설정은 제한시간이 없음
+
+
+
+### 읽기전용 트랜잭션
+
+- 읽기전용으로 설정해두면 트랜잭션 내에서 데이터를 조작하는 시도를 막아줄 수 있음 또한 데이터 액세스 기술에 따라서 성능이 향상될 수도 있음
+
+
+
+### TransactionIterceptor
+
+- 스프링에는 편리하게 트랜잭션 경계 설정을 위해 `TransactionInterceptor` 가 존재함
+- `TransactionInterceptor`에는 `PlatformTransactionManager`와 `Properties` 타입의 두가지 프로퍼티를 가짐
+- `Properties`는 트랜잭션 속성을 정의한 프로퍼티
+- 트랜잭션 속성은 `TransactionAttribute` 인터페이스로 정의됨 이 인터페이스로 트랜잭션 부가기능의 동작 방식을 모두 제어할 수 있음
+- `TransactionInterceptor` 의 기본 구현체인 `DefaultTransactionAttribute` 는 런타임 예외는 롤백시키고 체크 예외를 던지는 경우에는 이것을 예외상황이라 생각하지 않고 커밋해버림
+
+`DefaultTransactionAttribute.rollbackOn() 메서드`
+
+```java
+    public boolean rollbackOn(Throwable ex) {
+        return ex instanceof RuntimeException || ex instanceof Error;
+    }
+```
+
+
+
+
+
+### 포인트컷과 트랜잭션 속성의 적용 전략
+
+- 트랜잭션 부가기능을 적용할 후보 메서드를 선정하는 작업은 포인트컷에 의해 진행됨. 그리고 어드바이스의 트랜잭션 전파 속성따라서 메서드별로 트랜잭션의 적용 방식이 결정됨 
+
+- 쓰기 작업이 없는 단순한 조회 작업을 하더라도 모두 트랜잭션을 적용하는게 좋음. 조회의 경우에는 읽기전용으로 트랜잭션 속성을 설정해두면 그만큼 성능 향상을 가져올 수 있음. 제한시간도 지정 가능. 격리 수준에 따라 조회도 반드시 트랜잭션 안에서 진행해야할 경우도 있음
+
+- `프록시 방식 AOP는 같은 타깃 오브젝트 내의 메서드를 호출할 때는 적용되지 않는다`
+
+  - 타깃 오브젝트가 자기 자신의 메서드를 호출할 때는 프록시를 통한 부가기능이 적용되지 않음
+  - 클라이언트가 인터페이스 타입으로 주입된 빈을 사용해야 프록시를 통한 부가기능을 사용할 수 있기 때문
+  - 타깃 안에서 프록시를 적용할 수 있는 방법은 AspectJ와 같은 타깃의 바이트코드를 직접 조작하는 방식으로 AOP를 적용하면 됨
+
+- `트랜잭션 경계설정의 일원화`
+
+  - 트랜잭션 경계설정의 부가기능을 여러 계층에서 중구난방으로 적용하는 건 좋지 않음
+  - 서비스 계층을 트랜잭션이 시작되고 종료되는 경계로 지정했다면 다른 계층이나 모듈에서 DAO에 직접 접근하는 것은 차단해야 함
+  - 모든 DAO요청은 서비스 계층을 지나도록 하는게 좋음
 
   
 
 
 
+## 애너테이션 트랜잭션 속성과 포인트컷
 
+### @Transactional
+
+```java
+@Target({ElementType.TYPE, ElementType.METHOD})
+@Retention(RetentionPolicy.RUNTIME)
+@Inherited
+@Documented
+public @interface Transactional {
+    @AliasFor("transactionManager")
+    String value() default "";
+
+    @AliasFor("value")
+    String transactionManager() default "";
+
+    Propagation propagation() default Propagation.REQUIRED;
+
+    Isolation isolation() default Isolation.DEFAULT;
+
+    int timeout() default -1;
+
+    boolean readOnly() default false;
+
+    Class<? extends Throwable>[] rollbackFor() default {};
+
+    String[] rollbackForClassName() default {};
+
+    Class<? extends Throwable>[] noRollbackFor() default {};
+
+    String[] noRollbackForClassName() default {};
+}
+```
+
+
+
+- `@Transactional` 애너테이션은 메서드, 클래스, 인터페이스에 사용 가능
+- `@Transactional` 애너테이션을 트랜잭션 속성정보로 사용하도록 지정하면 스프링은 `@Transactional`이 부여된 모든 오브젝트를 자동으로 타깃 오브젝트로 인식함
+- 사용되는 포인트컷은 `TransactionAttributeSourcePointcut`, `TransactionAttributeSourcePointcut`은 스스로 표현식과 같은 선정 기준을 갖지 않지만 `@Transactional`이 부여된 빈 오브젝트를 모두 찾아서 포인트컷의 선정 결과로 돌려줌
+- `@Transactional`은 기본적으로 트랜잭션 속성을 정의하는 것이지만, 동시에 포인트컷의 자동등록에도 사용됨
+
+
+
+### @Transactional 대체 정책
+
+- 스프링은 `@Transactional`을 적용할 때 4단계의 대체 정책을 이용하게 해줌.
+- 메서드의 속성을 확인할 때 타깃 메서드, 타깃 클래스, 선언 메서드, 선언 타입의 순서에 따라서 `@Transactional`이 적용됐는지 차례로 확인하고 가장 먼저 발견되는 속성 정보를 사용함
+
+```java
+//1
+public interface Service {
+    //2
+    void method();
+}
+
+//3
+public class ServiceImpl impletes Service {
+   //4
+   public void method1()
+}
+
+```
+
+- `@Transcational` 이 적용될 수 있는 위치는 총 4곳, 번호의 역순으로 우선순위를 가짐
+- 인터페이스를 사용하는 프록시 방식의 AOP가 아니라면 `@Transactional`이 무시되기 때문에 안전하게 타깃 클래스에 `@Transactional`을 두는 방법을 권장함
+
+
+
+
+
+
+
+## 정리
+
+- 트랜잭션 경계설정 코드를 분리해서 별도의 클래스로 만들고 비지니스 로직 클래스와 동일한 인터페이스를 구현하면 DI의 확장 기능을 이용해 클라이언트의 변경 업싱도 깔끔하게 분리된 트랜잭션 부가기능을 만들 수 있다.
+- 트랜잭션처럼 환경과 외부 리소스에 영향을 받는 코드를 분리하면 비지니스 로직에만 충실한 테스트를 만들 수 있다
+- 목 오브젝트를 활용하면 의존관계 속에 있는 오브젝트도 손쉽게 고립된 테스트로 만들 수 있다.
+- DI를 이용한 트랜잭션의 분리는 데코레이터 패턴과 프록시 패턴으로 이해될 수 있다.
+- 번거로운 프록시 클래스 작성은 JDK의 다이내믹 프록시를 사용하면 간단하게 만들 수 있다
+- 다이내믹 프록시는 스태틱 팩토리 메서드를 사용하기 때문에 빈으로 등록하기 번거롭다. 따라서 팩토리 빈으로 만들어야 한다. 스프링은 자동 프록시 생성 기술에 대한 추상화 서비스를 제공하는 프록시 팩토리 빈을 제공한다.
+- 프록시 팩토리 빈의 설정이 반복되는 문제를 해결하기 위해 자동 프록시 생성기와 포인트컷을 활용할 수 있다. 자동 프록시 생성기는 부가기능이 담긴 어드바이스를 제공하는 프록시를 스프링 컨테이너 초기화 시점에 자동으로 만들어준다.
+- 포인트컷은 AspectJ 포인트컷 표현식을 사용해서 작성하면 편리하다.
+- AOP는 OOP만으로는 모듈화하기 힘든 부가기능을 효과적으로 모듈화하도록 도와주는 기술이다.
+- 스프링은 자주 사용되는 AOP 설정과 트랜잭션 속성을 지정하는 데 사용할 수 있는 전용 태그를 제공한다.
+- AOP를 이용해 트랜잭션 속성을 지정하는 방법에는 포인트컷 표현식과 메서드 이름 패턴을 이용하는 방법과 타깃에 직접 부여하는 @Transactional 애터네이션을 사용하는 방법이 있다.
+- @Transactional을 이용한 트랜잭션 속성을 테스트에 적용하면 손쉽게 DB를 사용하는 코드의 테스트를 만들 수 있다.
 
