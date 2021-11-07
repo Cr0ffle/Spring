@@ -390,7 +390,15 @@ public class TransactionHandler implements InvocationHandler {
 - 팩토리 빈은 `FactoryBean` 이라는 인터페이스를 구현해서 만들 수 있음
 
 ```java
-public interface FactoryBean<T> {    @Nullable    T getObject() throws Exception;    @Nullable    Class<?> getObjectType();    default boolean isSingleton() {        return true;    }}
+public interface FactoryBean<T> {
+    @Nullable
+    T getObject() throws Exception;
+    @Nullable
+    Class<?> getObjectType();
+    default boolean isSingleton() {
+        return true;
+    }
+}
 ```
 
 - `FactoryBean` 인터페이스를 구현한 클래스를 스프링의 빈으로 등록하면 팩토리 빈으로 동작함
