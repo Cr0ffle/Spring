@@ -602,6 +602,20 @@ public class DynamicProxyTest {
 - 경우에 따라서 CGLib이라고 하는 오픈소스 바이트코드 생성프레임워크를 이용해 프록시를 만들기도 함 (자세한 내용은 vol.2에서 ..)
 - **어드바이스는 타깃 오브젝트에 종속되지 않는 순수한 부가기능을 담은 오브젝트라는 사실이 중요**
 
+
+
+
+
+> ProxyFactoryBean vs ProxyFactory
+>
+> 
+>
+> 
+
+
+
+
+
 ### 포인트컷: 부가기능 적용 대상 메소드 선정 방법
 
 - `MethodInvocation`은 재사용 가능한 순수한 부가 기능 제공 코드만 남겨주기 때문에 아래와 같이 특정 메서드를 선정해서 적용 대상을 판별할 수 없음
@@ -1060,6 +1074,19 @@ public @interface EnableAspectJAutoProxy {
 - 모든 DB 트랜잭션은 격리수준을 갖고 있어야 함
 - `DefaultTransactionDefinition`에 설정된 격리수준은 `ISOLATION_DEFAULT`, 이는 DataSource에 설정된 디폴트 격리수준을 그대로 따른다는 뜻
 - 기본적으로 DB나 DataSource에 설정된 디폴트 격리수준을 따르는 편이 좋지만, 특별한 작업을 수행하는 메서드의 경우는 독자적인 격리수준을 지정할 필요가 있음
+- 트랜잭션 격리 수준
+  - **READ UNCOMMITTED:** 커밋하지 않은 데이터를 읽을 수 있음
+  - **READ COMMITED:** 커밋한 데이터만 읽을 수 있음 따라서 DIRTY READ가 발생하지는 않음 하지만 NON-REPEATABLE READ는 발생할 수 있음
+  - **REPEATABLE READ:** 한 번 조회한 데이터를 반복해서 조회해도 같은 데이터가 조회됨 하지만 PHANTOM READ는 발생할 수 있음
+  - **SERIALIZABLE:** 가장 엄격한 트랜잭션 격리 수준, 완벽한 읽기 일관성 모드를 제공하지만 동시성 처리 성능이 급격히 떨어질 수 있음
+
+
+- 격리수준에 따른 문제점
+  - **DIRTY READ:** 다른 트랜잭션에 의해 수정됐지만 아직 커밋되지 않은 데이터를 읽는 것을 말한다. 변경 후 아직 커밋되지 않은 값을 읽었는데 변경을 가한 트랜잭션이 최종적으로 롤백된다면 그 값을 읽은 트랜잭션은 비일관된 상태에 놓이게 된다.
+  - **NON-REPEATABLE READ:** 한 트랜잭션 내에서 같은 쿼리를 두 번 수행했는데, 그 사이에 다른 트랜잭션이 값을 수정 또는 삭제하는 바람에 두 쿼리 결과가 다르게 나타나는 현상을 말한다.
+  - **PHANTOM READ:** 한 트랜잭션 내에서 같은 쿼리를 두 번 수행했는데, 첫 번째 쿼리에서 없던 유령(Phantom) 레코드가 두 번째 쿼리에서 나타나는 현상을 말한다.
+
+
 
 ### 트랜잭션 제한시간
 
@@ -1091,6 +1118,8 @@ public @interface EnableAspectJAutoProxy {
 ```
 
 
+
+Spring 트랜잭션 인프라 (TransactionInterceptor, PlatformTranscationManager 등등)에 대한 내용을 블로그로 따로 정리했음 [https://sup2is.github.io/2021/11/11/about-spring-transaction.html](https://sup2is.github.io/2021/11/11/about-spring-transaction.html)
 
 
 
@@ -1183,6 +1212,48 @@ public class ServiceImpl impletes Service {
 - 인터페이스를 사용하는 프록시 방식의 AOP가 아니라면 `@Transactional`이 무시되기 때문에 안전하게 타깃 클래스에 `@Transactional`을 두는 방법을 권장함
 
 
+
+### 트랜잭션 애너테이션 적용
+
+```java
+@Transaction
+public interface UserService{
+    
+    void add(User user);
+    void deleteAll();
+    void update(User user);
+    void upgradeLevels();
+    
+    @Transactional(readOnly=true)
+    User get(String id);
+    
+    @Transactional(readOnly=true)
+    List<User> getAll();
+}
+```
+
+- 인터페이스 방식의 프록시를 사용하는 경우에는 인터페이스에 @Transactional을 적용해도 문제가 되지 않음
+- 하지만 타깃 오브젝트에 아래와같이 사용할 경우 트랜잭션 우선순위에 따라 @Transactional(readOnly=true) 같은 설정이 무시될 수 있음을 주의해야함
+
+```java
+@Transactional
+public class UserServiceImpl implements UserService {
+    
+}
+```
+
+- get()과 getAll() 메서드는 readOnly=true가 무시됨 주의!
+
+
+
+
+
+### 선언적 트랜잭션과 프로그래밍에 의한 트랜잭션
+
+- 트랜잭션 전파 속성을 사용해서 크고 작은 다양한 모습의 트랜잭션 작업을 만들 수 있음
+- AOP를 이용해서 코드 외부에서 트랜잭션의 기능을 부여해주고 속성을 지정할 수 있게 하는 방법을 선언적 트랜잭션 이라고 함
+- 반대로 TransactionTemplate이나 개별 데이터 기술의 트랜잭션 API를 사용해 직접 코드 안에서 사용하는 방법은 프로그램에 의한 트랜잭션 이라고 함
+- 스프링은 두가지 방법 모두 지원하고 특별한 경우가 아니라면 선언적 트랜잭션을 사용하는것이 바람직함
 
 
 
