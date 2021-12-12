@@ -28,7 +28,7 @@
 - 빈을 선택하는 로직은 포인트컷을 이용하면 되고 xml이나 애너테이션을 통해 이미 정의된 빈의 의존관계를 바꿔치기 하는 것은 빈 후처리기를 사용한다.
 - 자동 프록시 생성기가 만들어주는 프록시는 새로운 빈으로 추가되는 것이 아니라 AOP 타깃 빈을 대체한다. 
 
-![8](./images/toby-spring-vol2/8.png)
+![8](https://github.com/sup2is/dev-note/raw/master/spring/images/toby-spring-vol2/8.png)
 
 - 등록된 빈의 관점으로 볼때 자동 프록시 생성기 방식에서는 `Target` 오브젝트가 빈으로 직접 노출되지 않는다.
 - AOP 자동 프록시 생성기방식의 특징들
@@ -358,7 +358,7 @@ daoLater() && !within(com.example.exclude.dao..*)
 
 - 어드바이스는 다섯 종류가있다. 메서드 실행 과정의 일부분에만 적용할 수 있도록 만들어졌다.
 
-![9](./images/toby-spring-vol2/9.png)
+![9](https://github.com/sup2is/dev-note/raw/master/spring/images/toby-spring-vol2/9.png)
 
 - 어드바이스가 프록시 안에서 어느 단계에 적용되느냐에 따라 어드바이스의 종류가 달라진다.
 - 어드바이스를 정의하는 메서드는 어드바이스 애너테이션과 어드바이스에 적용되는 포인트컷 그리고 메서드 코드로 구성된다.
